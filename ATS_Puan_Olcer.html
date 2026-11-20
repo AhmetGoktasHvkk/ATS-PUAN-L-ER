@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATS Puan Ölçer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2433;--mute:#6b7385;--line:#e3e6ec;--acc:#2f5bd3;--good:#1f9d63;--mid:#d99a12;--bad:#d2493a}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1c2028;--ink:#e8ebf1;--mute:#9aa2b2;--line:#2c323d;--acc:#6f93ff}}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 22px;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+textarea{width:100%;height:260px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.45 Inter,sans-serif;background:var(--bg);color:var(--ink)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+label.file{font-size:12.5px;color:var(--acc);cursor:pointer;font-weight:500}
+label.file input{display:none}
+select{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card);color:var(--ink);font:13px Inter,sans-serif}
+button{border:0;border-radius:9px;padding:11px 22px;font:600 14px Inter,sans-serif;cursor:pointer;background:var(--acc);color:#fff}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line);padding:8px 14px;font-size:13px}
+.hint{font-size:12px;color:var(--mute)}
+#res{display:none;margin-top:22px}
+.top{display:grid;grid-template-columns:230px 1fr;gap:16px}
+@media(max-width:800px){.top{grid-template-columns:1fr}}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.gauge svg{width:170px;height:170px}
+.verdict{font-weight:600;margin-top:6px}
+.cat{margin-bottom:12px}
+.cat .lbl{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px}
+.cat .lbl span:last-child{color:var(--mute);font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--line);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
+.chip.ok{background:color-mix(in srgb,var(--good) 14%,transparent);border-color:transparent}
+.chip.no{background:color-mix(in srgb,var(--bad) 13%,transparent);border-color:transparent}
+ul.tips{margin:0;padding-left:18px}
+ul.tips li{margin-bottom:6px;font-size:14px}
+.sec{margin-top:16px}
+.small{font-size:13px;color:var(--mute)}
+.starTop{display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.big{font-size:40px;font-weight:700;line-height:1}
+.starSub{display:grid;grid-template-columns:repeat(2,auto);gap:4px 24px;font-size:14px}
+table.st{width:100%;border-collapse:collapse;font-size:13px}
+table.st td{border-top:1px solid var(--line);padding:6px 4px;vertical-align:top}
+table.st td:first-child{white-space:nowrap;width:1%}
+table.st .chip{margin-right:3px}
+.aiTop{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center}
+@media(max-width:800px){.aiTop{grid-template-columns:1fr}}
+.mini{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13.5px;margin-bottom:8px}
+.issues{font-size:12px;color:var(--bad)}
+.blk{margin-top:20px}
+.blk h3{font-size:15px;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.chk{display:grid;grid-template-columns:22px 190px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+@media(max-width:700px){.chk{grid-template-columns:22px 1fr}.chk .n{grid-column:2}}
+.ic{font-weight:700}.ic.ok{color:var(--good)}.ic.no{color:var(--bad)}
+table.sk{width:100%;border-collapse:collapse;font-size:13.5px}
+table.sk th{text-align:left;font-weight:600;color:var(--mute);font-size:12px;padding:5px 6px;border-bottom:1px solid var(--line)}
+table.sk td{padding:6px;border-top:1px solid var(--line)}
+table.sk td.n{text-align:center;width:70px;font-variant-numeric:tabular-nums}
+table.sk tr.miss td:first-child{color:var(--bad);font-weight:600}
+.rw{border-top:1px solid var(--line);padding:10px 0}
+.rw .o{font-size:13px;color:var(--mute);margin-bottom:5px}
+.rw .r{font-size:14px;font-weight:500}
+.rw .b{margin:4px 0}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:260px;border:2px dashed var(--line);border-radius:10px;cursor:pointer;text-align:center;padding:12px;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.drop input{display:none}.dIc{font-size:26px;color:var(--acc)}
+.fcard{margin-top:10px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.sev{font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;color:#fff;white-space:nowrap}
+.e1{background:var(--bad)}.e2{background:var(--mid)}.e3{background:#7b8496}
+.err-row{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.err-row .t{font-weight:600}.err-row .fx{color:var(--good);margin-top:2px}
+ol.rec{margin:0;padding-left:20px}ol.rec li{margin-bottom:8px;font-size:14px}
+.err{color:var(--bad);font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ATS Puan Ölçer</h1>
+<p class="sub">CV'nizi Word veya PDF olarak yükleyin, başvuracağınız iş ilanını ekleyin. Claude, CV'yi ilanla karşılaştırıp eşleşme oranı, eksik beceriler, aranabilirlik kontrolleri ve yüzdeli STAR önerileri verir. Claude'a ulaşılamazsa tarayıcı içi hızlı tarama sonuç verir.</p>
+
+<div class="grid">
+ <div class="card">
+  <h2>1. CV dosyası</h2>
+  <label class="drop" id="drop"><input type="file" id="cvFile" accept=".docx,.pdf">
+   <div class="dIc">⬆</div><div><b>Word (.docx) veya PDF yükleyin</b></div><div class="small">Dosyayı buraya sürükleyin ya da tıklayıp seçin</div></label>
+  <div id="fileCard" class="fcard" style="display:none"></div>
+  <textarea id="cv" style="display:none"></textarea>
+  <div class="hint" id="cvInfo"></div>
+ </div>
+ <div class="card">
+  <h2>2. İş ilanı <span class="hint">(önerilir)</span></h2>
+  <textarea id="job" placeholder="İş ilanının metnini buraya yapıştırın. Boş bırakırsanız seçtiğiniz sektörün tipik anahtar kelimeleri kullanılır."></textarea>
+  <div class="row"><span class="small">Sektör:</span>
+   <select id="sector">
+    <option value="banka">Bankacılık / Katılım bankacılığı</option>
+    <option value="finans">Finans / Bütçe / Raporlama</option>
+    <option value="genel">Genel</option>
+   </select>
+  </div>
+ </div>
+</div>
+<div class="row" style="margin-top:16px"><button id="go">CV'yi tara</button><span class="err" id="err"></span></div>
+
+<div id="ai" class="card" style="display:none;margin-top:22px">
+ <h2>Claude değerlendirmesi <span class="small" id="aiStatus"></span></h2>
+ <div id="aiBody"></div>
+</div>
+<div id="res">
+ <h2 style="font-size:16px;margin:22px 0 10px">Hızlı tarama <span class="small">(tarayıcı içi, kurala dayalı)</span></h2>
+ <div class="top">
+  <div class="card gauge"><div id="gauge"></div><div class="verdict" id="verdict"></div><div class="small" id="wc"></div></div>
+  <div class="card"><h2>Kategori puanları</h2><div id="cats"></div></div>
+ </div>
+ <div class="grid sec">
+  <div class="card"><h2>Bulunan anahtar kelimeler <span class="small" id="okN"></span></h2><div class="chips" id="okK"></div></div>
+  <div class="card"><h2>Eksik anahtar kelimeler <span class="small" id="noN"></span></h2><div class="chips" id="noK"></div></div>
+ </div>
+ <div class="card sec"><h2>STAR analizi <span class="small">D/G: durum/görev · E: eylem · S: rakamlı sonuç · S?: sonuç yer tutucuda</span></h2><div id="star"></div></div>
+ <div class="card sec"><h2>İyileştirme önerileri <button class="ghost" id="copy">Raporu kopyala</button></h2><ul class="tips" id="tips"></ul></div>
+ <p class="small sec">Not: Bu bir tahmindir. Gerçek ATS sistemleri (Workday, SAP SuccessFactors, Kariyer.net vb.) farklı kurallarla puanlar; ancak hepsi anahtar kelime uyumu, standart bölüm başlıkları ve okunabilir biçime önem verir.</p>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fold=s=>s.toLocaleLowerCase('tr').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/â/g,'a').replace(/î/g,'i').replace(/û/g,'u');
+
+const STOP=new Set(fold(`ve veya ile için icin bir bu şu o da de ki mi gibi olarak olan olmak olup olması olmasi en çok daha her tüm tum ayrıca ayrica kadar sonra önce once göre gore üzere uzere içinde icinde arasında arasinda biz siz onlar bizim sizin şirket sirket firma firmamız firmamiz şirketimiz sirketimiz pozisyon pozisyonu pozisyonumuz için aday adaylar adayların aranan arıyoruz ariyoruz arkadaş arkadas çalışma calisma çalışacak calisacak ekibimize ekibimizde katılacak katilacak tercih tercihen sebebiyle yönelik yonelik konusunda konularında alanında alaninda bilgi bilgisi sahip olan iyi düzeyde duzeyde yıl yil yıllık yillik en az az fazla tecrübe tecrube tecrübeli deneyim deneyimli iş is işi isi görev gorev görevi tanımı tanimi nitelikler genel sorumluluklar aranan beklenen mezun mezunu üniversitelerin universitelerin bölümlerinden bolumlerinden olmayan yapmış yapmis yapan yapacak edecek etmek etme edebilen yapabilen sahibi istanbul türkiye turkiye the and for with you our are will that this have from your team role work years experience ability strong good arıyor ariyor sebebi sebebidir gerçekleştirilmesi gerceklestirilmesi hakim hâkim tercih edilir beklentiler beklentilerimiz olacak olmalı olmali sağlanması saglanmasi takip etmek`).split(/\s+/));
+
+const PRESET={
+ banka:"katılım bankacılığı, ticari bankacılık, kobi, şube, portföy yönetimi, müşteri ilişkileri, kredi tahsis, risk, istihbarat, teminat, murabaha, finansal kiralama, kgf, fon toplama, katılma hesabı, çapraz satış, satış, pazarlama, mevzuat, bddk, masak, uyum, mali tablo analizi, dış ticaret, akreditif, teminat mektubu, pos, hedef, ekip yönetimi, spk, bes, segem",
+ finans:"bütçe, raporlama, fp&a, finansal analiz, tahmin, sapma analizi, maliyet, nakit akışı, konsolidasyon, mizan, bilanço, gelir tablosu, ifrs, tfrs, vergi, muhasebe, excel, power bi, sql, sap, erp, dashboard, kpi, otomasyon, veri analizi, yönetim raporlaması, performans",
+ genel:"iletişim, takım çalışması, problem çözme, analitik düşünme, proje yönetimi, raporlama, excel, microsoft office, sunum, müşteri odaklılık, liderlik, planlama, zaman yönetimi, ingilizce"
+};
+const ACTIONS=fold("yönetti yönettim yürüttü yürüttüm artırdı artırdım arttırdı geliştirdi geliştirdim sağladı sağladım oluşturdu oluşturdum kurdu kurdum planladı planladım uyguladı uyguladım tamamladı tamamladım hazırladı hazırladım düşürdü düşürdüm azalttı azalttım kazandırdı kazandırdım gerçekleştirdi gerçekleştirdim koordine liderlik etti başlattı başlattım iyileştirdi iyileştirdim tasarladı tasarladım analiz etti raporladı raporladım optimize sundu sundum yükseltti yükselttim kazandı kazandım katkı verdi yönetmek").split(/\s+/);
+
+function stem(w){return w.length<=5?w:w.slice(0,Math.max(5,Math.ceil(w.length*0.7)));}
+function has(foldText,kw){
+ const parts=fold(kw).split(/\s+/).filter(Boolean);
+ return parts.every(p=>{const s=stem(p).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp('(^|[^a-z0-9])'+s).test(foldText);});
+}
+function jobKeywords(job){
+ const orig=job.toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşüâîû&+#\s-]/g,' ').split(/\s+/).filter(Boolean);
+ const disp={};const words=[];orig.forEach(o=>{const w=fold(o);if(w.length>=4&&!STOP.has(w)&&!/^\d+$/.test(w)){words.push(w);disp[w]=disp[w]||o;}});
+ const cnt={};words.forEach(w=>{const s=stem(w);(cnt[s]=cnt[s]||{n:0,w}).n++;});
+ // bigrams
+ const bi={};for(let i=0;i<words.length-1;i++){const k=words[i]+' '+words[i+1];bi[k]=(bi[k]||0)+1;}
+ const bis=Object.entries(bi).filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+ const uni=Object.values(cnt).sort((a,b)=>b.n-a.n||b.w.length-a.w.length).slice(0,28).map(e=>e.w);
+ const out=[...bis];uni.forEach(u=>{if(!out.some(o=>o.split(' ').some(p=>stem(p)===stem(u))))out.push(u);});
+ return out.slice(0,32).map(k=>k.split(' ').map(p=>disp[p]||p).join(' '));
+}
+
+async function readFile(f){
+ const ext=f.name.split('.').pop().toLowerCase();
+ if(ext==='txt')return await f.text();
+ if(ext==='docx'){const r=await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()});return r.value;}
+ if(ext==='pdf'){
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;let t='';
+  for(let i=1;i<=pdf.numPages;i++){const c=await (await pdf.getPage(i)).getTextContent();
+   let last=null;c.items.forEach(it=>{const y=it.transform[5];if(last!==null&&Math.abs(y-last)>2)t+='\n';t+=it.str+' ';last=y;});t+='\n';}
+  return t;}
+ throw new Error('Desteklenmeyen dosya türü');
+}
+let fileMeta='';
+async function loadFile(f){
+ if(!f)return;$('err').textContent='';$('cvInfo').textContent='';
+ const ext=f.name.split('.').pop().toLowerCase();
+ if(!['docx','pdf'].includes(ext)){$('err').textContent='Lütfen .docx veya .pdf dosyası yükleyin (eski .doc biçimi için Word\'de "Farklı kaydet → .docx" yapın).';return;}
+ $('fileCard').style.display='flex';$('fileCard').innerHTML='<span><span class="spin"></span> '+f.name+' okunuyor…</span>';
+ try{
+  const buf=await f.arrayBuffer();let text='',notes=[];
+  if(ext==='docx'){
+   if(typeof mammoth==='undefined')throw new Error('Word okuyucu yüklenemedi');
+   text=(await mammoth.extractRawText({arrayBuffer:buf})).value;
+   const html=(await mammoth.convertToHtml({arrayBuffer:buf})).value;
+   const tb=(html.match(/<table/g)||[]).length,im=(html.match(/<img/g)||[]).length;
+   if(tb)notes.push(tb+' tablo içeriyor (bazı ATS sistemleri tabloları yanlış sırayla okur)');
+   if(im)notes.push(im+' görsel/fotoğraf içeriyor (ATS görselleri okuyamaz)');
+   notes.push('Not: üstbilgi/altbilgi ve metin kutularındaki yazılar okunmamış olabilir');
+  }else{
+   if(typeof pdfjsLib==='undefined')throw new Error('PDF okuyucu yüklenemedi');
+   const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+   for(let i=1;i<=pdf.numPages;i++){const c=await (await pdf.getPage(i)).getTextContent();
+    let last=null;c.items.forEach(it=>{const y=it.transform[5];if(last!==null&&Math.abs(y-last)>2)t2('\n');t2(it.str+(it.hasEOL?'\n':' '));last=y;});t2('\n');}
+   function t2(x){text+=x;}
+   notes.push(pdf.numPages+' sayfa');
+   if(text.replace(/\s/g,'').length<200)notes.push('PDF\'ten neredeyse hiç metin okunamadı: taranmış görsel olabilir, ATS bu CV\'yi okuyamaz');
+  }
+  text=text.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  $('cv').value=text;fileMeta='Dosya türü: '+ext.toUpperCase()+'. '+notes.join('; ')+'.';
+  const wc=text.split(/\s+/).filter(Boolean).length;
+  $('fileCard').innerHTML=`<span>📄 <b>${f.name.replace(/[<>&]/g,'')}</b><br><span class="small">${wc} kelime okundu · ${notes.filter(n=>!n.startsWith('Not:')).join(' · ')||'sorun görülmedi'}</span></span><button class="ghost" id="chg" style="padding:5px 10px;font-size:12px">Değiştir</button>`;
+  $('chg').onclick=e=>{e.preventDefault();$('cvFile').value='';$('cvFile').click();};
+  $('drop').style.display='none';
+ }catch(x){$('fileCard').style.display='none';$('err').textContent='Dosya okunamadı: '+x.message+'. Dosyanın şifreli veya bozuk olmadığından emin olun.';}
+}
+$('cvFile').onchange=e=>loadFile(e.target.files[0]);
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('over');}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('over');}));
+$('drop').addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+
+function color(p){return p>=75?'var(--good)':p>=50?'var(--mid)':'var(--bad)';}
+let lastReport='',star=null;
+
+function starItems(cv){
+ const isHead=l=>l.length<45&&l===l.toLocaleUpperCase('tr')&&/[A-ZÇĞİÖŞÜ]{3}/.test(l);
+ const items=[];let cur=null,sec='';
+ cv.split('\n').forEach(raw=>{const l=raw.trim();
+  if(!l){cur=null;return;}
+  if(isHead(l)){sec=fold(l);cur=null;items.push({h:sec});return;}
+  const bullet=/^[\-•*·▪◦–]\s*/.test(l);const t=l.replace(/^[\-•*·▪◦–]+\s*/,'');
+  if(bullet||!cur||/[.!?]$/.test(cur.t)){cur={t,sec};items.push(cur);}else cur.t+=' '+t;
+ });
+ const exp=items.filter(i=>i.t&&/(deneyim|tecrube|experience)/.test(i.sec));
+ return (exp.length?exp:items.filter(i=>i.t)).map(i=>i.t);
+}
+$('go').onclick=()=>{
+ const cv=$('cv').value.trim(),job=$('job').value.trim();$('err').textContent='';
+ if(cv.length<80){$('err').textContent=cv?'Dosyadan yeterli metin okunamadı.':'Lütfen CV dosyanızı yükleyin.';return;}
+ const F=fold(cv),tips=[],cats=[];
+ // 1 keywords (40)
+ let kws=job.length>60?jobKeywords(job):[];
+ const preset=PRESET[$('sector').value].split(',').map(s=>s.trim());
+ if(kws.length<10)kws=[...new Set([...kws,...preset])];
+ const ok=kws.filter(k=>has(F,k)),no=kws.filter(k=>!has(F,k));
+ const kr=ok.length/kws.length;const kScore=Math.round(Math.min(1,kr/0.75)*40);
+ cats.push(['Anahtar kelime uyumu',kScore,40]);
+ if(kr<0.75)tips.push(`İlandaki anahtar kelimelerin %${Math.round(kr*100)}'i CV'de geçiyor. %75'in üzerine çıkmak için eksik kelimelerden gerçekten sahip olduklarınızı özet, deneyim ve yetkinlik bölümlerine ekleyin: ${no.slice(0,6).join(', ')}.`);
+ if(job.length<=60)tips.push('Daha doğru sonuç için başvuracağınız ilanın metnini de yapıştırın; ATS puanı her ilana göre değişir.');
+ // 2 sections (15)
+ const SEC=[['Özet / Profil',/(ozet|profil|hakkimda|kariyer hedef|summary|profile)/],['Deneyim',/(deneyim|is deneyimi|tecrube|experience)/],['Eğitim',/(egitim|education)/],['Yetkinlik / Beceri',/(yetkinlik|beceri|skills|yetenek)/],['Sertifika',/(sertifika|lisans|certificat)/],['Dil',/(diller|yabanci dil|languages)/]];
+ const miss=SEC.filter(s=>!s[1].test(F)).map(s=>s[0]);
+ const sScore=Math.round((SEC.length-miss.length)/SEC.length*15);cats.push(['Standart bölüm başlıkları',sScore,15]);
+ if(miss.length)tips.push('Şu standart bölüm başlıkları bulunamadı: '+miss.join(', ')+'. ATS bölümleri bu başlıklarla tanır.');
+ // 3 contact (10)
+ const em=/[\w.+-]+@[\w-]+\.[\w.]+/.test(cv),ph=/(\+?90[\s-]?)?\(?0?5\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}/.test(cv),li=/linkedin\.com\//i.test(cv);
+ const cScore=(em?4:0)+(ph?4:0)+(li?2:0);cats.push(['İletişim bilgileri',cScore,10]);
+ if(!em)tips.push('E-posta adresi bulunamadı. Başlığa düz metin olarak ekleyin (üstbilgi/altbilgi içine değil).');
+ if(!ph)tips.push('Telefon numarası bulunamadı. 05XX XXX XX XX biçiminde ekleyin.');
+ if(!li)tips.push('LinkedIn profil adresinizi ekleyin.');
+ // 4 quantified (15)
+ const lines=cv.split(/\n+/).map(l=>l.trim()).filter(l=>l.length>25);
+ const q=lines.filter(l=>/(%\s?\d|\d\s?%|\d+[.,]?\d*\s?(tl|₺|milyon|mn|bin|usd|\$|€|kişi|kisi|musteri|müşteri|gün|gun|adet|sube|şube))/i.test(l)).length;
+ const qScore=Math.min(10,q*2);cats.push(['Ölçülebilir başarılar',qScore,10]);
+ if(q<5)tips.push(`Rakamla ifade edilen yalnızca ${q} satır var. En az 5 maddeye yüzde, tutar veya kişi sayısı içeren sonuçlar ekleyin (ör. "portföyü %25 büyüttü").`);
+ // 5 action verbs (10)
+ const av=ACTIONS.filter(a=>new RegExp('(^|[^a-z])'+a).test(F)).length;
+ const aScore=Math.min(5,Math.round(av*0.6));cats.push(['Eylem fiilleri',aScore,5]);
+ // STAR (10)
+ const ST=/(icin|amaciyla|kapsaminda|hedef|ihtiyac|doneminde|nedeniyle|karsi|surecinde|gerisinde|sorun|problem|talep|amac)/;
+ const AC=/(^|[^a-z])[a-z]{3,}(di|ti|du|tu)(m|k)?([^a-z]|$)/;
+ const bl=starItems(cv).filter(l=>{const n=l.split(/\s+/).length;return n>=8&&n<=80&&!/\|/.test(l);});
+ const rows=bl.map(l=>{const f=fold(l);const st=ST.test(f),ac=AC.test(f),num=/\d/.test(l.replace(/\b(19|20)\d{2}\b/g,'')),ph=/\[[^\]]*\]/.test(l);return{l,st,ac,r:num?2:(ph?1:0)};});
+ const N=rows.length||1,pct=x=>Math.round(x/N*100);
+ const sP=pct(rows.filter(r=>r.st).length),aP=pct(rows.filter(r=>r.ac).length),rP=pct(rows.filter(r=>r.r===2).length);
+ const full=pct(rows.filter(r=>r.st&&r.ac&&r.r===2).length),struct=pct(rows.filter(r=>r.st&&r.ac&&r.r>0).length);
+ const starScore=Math.round(full/10);cats.push(['STAR uyumu',starScore,10]);
+ star={rows,sP,aP,rP,full,struct};
+ if(rows.length&&full<70)tips.push(`Tam STAR yapısındaki (durum/görev + eylem + rakamlı sonuç) madde oranı: %${full}.`+(struct>full?` Yapısı STAR olup sonucu yer tutucuda kalan maddelerle oran %${struct} olur; rakamları doldurun.`:` Maddeleri "… amacıyla / … için (durum) → … yaptı (eylem) → …'i %X artırdı (sonuç)" kalıbında yazın.`));
+ if(av<8)tips.push('Maddelere güçlü eylem fiilleriyle başlayın veya bitirin: yönetti, artırdı, geliştirdi, kurdu, sağladı, düşürdü.');
+ // 6 format (10)
+ const wc=cv.split(/\s+/).filter(Boolean).length;let fScore=10;
+ if(wc<300){fScore-=4;tips.push(`CV ${wc} kelime; çok kısa. Deneyimleri detaylandırarak 400–900 kelimeye çıkarın.`);}
+ else if(wc>1100){fScore-=3;tips.push(`CV ${wc} kelime; uzun. 2 sayfayı ve ~1000 kelimeyi aşmamaya çalışın.`);}
+ const ph2=(cv.match(/\[[^\]]{1,40}\]/g)||[]);
+ if(ph2.length){fScore-=4;tips.unshift(`CV'de doldurulmamış ${ph2.length} yer tutucu var (ör. ${[...new Set(ph2)].slice(0,3).join(', ')}). Göndermeden önce mutlaka doldurun veya silin.`);}
+ if(!/(19|20)\d{2}/.test(cv)){fScore-=2;tips.push('Tarih bulunamadı. Her pozisyona "Ay Yıl – Ay Yıl" biçiminde tarih ekleyin.');}
+ if(/[★✓✔➤►◆■●]/.test(cv)){fScore-=1;tips.push('Özel simgeler (★, ✔, ➤) bazı ATS sistemlerinde bozuk okunur; standart madde işareti kullanın.');}
+ fScore=Math.max(0,fScore);cats.push(['Biçim ve uzunluk',fScore,10]);
+
+ const total=cats.reduce((a,c)=>a+c[1],0);
+ // render
+ $('res').style.display='block';
+ const r=70,C=2*Math.PI*r,col=color(total);
+ $('gauge').innerHTML=`<svg viewBox="0 0 170 170"><circle cx="85" cy="85" r="${r}" fill="none" stroke="var(--line)" stroke-width="14"/><circle cx="85" cy="85" r="${r}" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C*total/100} ${C}" transform="rotate(-90 85 85)"/><text x="85" y="93" text-anchor="middle" font-size="40" font-weight="700" fill="var(--ink)">${total}</text><text x="85" y="116" text-anchor="middle" font-size="12" fill="var(--mute)">/ 100</text></svg>`;
+ $('verdict').textContent=total>=80?'Güçlü – ATS\'den geçme olasılığı yüksek':total>=60?'Orta – iyileştirme ile güçlenir':'Zayıf – önemli eksikler var';
+ $('verdict').style.color=col;$('wc').textContent=wc+' kelime';
+ $('cats').innerHTML=cats.map(([n,s,m])=>`<div class="cat"><div class="lbl"><span>${n}</span><span>${s} / ${m}</span></div><div class="bar"><i style="width:${s/m*100}%;background:${color(s/m*100)}"></i></div></div>`).join('');
+ const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+ $('okK').innerHTML=ok.map(k=>`<span class="chip ok">${esc(k)}</span>`).join('')||'<span class="small">Yok</span>';
+ $('noK').innerHTML=no.map(k=>`<span class="chip no">${esc(k)}</span>`).join('')||'<span class="small">Eksik yok</span>';
+ $('okN').textContent=ok.length+' / '+kws.length;$('noN').textContent=no.length;
+ const sc=v=>`<span style="color:${color(v)};font-weight:700">%${v}</span>`;
+ const badge=(on,t,half)=>`<span class="chip ${on?'ok':half?'':'no'}" style="padding:1px 7px;font-size:11.5px">${t}</span>`;
+ $('star').innerHTML=star.rows.length?`<div class="starTop"><div><div class="big" style="color:${color(star.full)}">%${star.full}</div><div class="small">tam STAR maddeler</div></div>
+  <div class="starSub"><div>Durum / Görev ${sc(star.sP)}</div><div>Eylem ${sc(star.aP)}</div><div>Rakamlı sonuç ${sc(star.rP)}</div><div class="small">Yer tutucular dolunca: %${star.struct}</div></div></div>
+  <table class="st">${star.rows.map(r=>`<tr><td>${badge(r.st,'D/G')}${badge(r.ac,'E')}${badge(r.r===2,r.r===1?'S?':'S',r.r===1)}</td><td>${esc(r.l)}</td></tr>`).join('')}</table>`
+  :'<span class="small">STAR analizi için en az 8 kelimelik madde bulunamadı.</span>';
+ if(!tips.length)tips.push('Tebrikler, belirgin bir eksik bulunamadı. Her başvuruda özeti ilana göre küçük dokunuşlarla uyarlayın.');
+ $('tips').innerHTML=tips.map(t=>`<li>${esc(t)}</li>`).join('');
+ lastReport=`ATS PUANI: ${total}/100\n`+cats.map(c=>`- ${c[0]}: ${c[1]}/${c[2]}`).join('\n')+(star&&star.rows.length?`\nSTAR uyumu: %${star.full} (Durum/Görev %${star.sP}, Eylem %${star.aP}, Rakamlı sonuç %${star.rP})`:'')+`\n\nEksik anahtar kelimeler: ${no.join(', ')||'-'}\n\nÖneriler:\n`+tips.map(t=>'• '+t).join('\n');
+ $('res').scrollIntoView({behavior:'smooth'});
+};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastReport);$('copy').textContent='Kopyalandı';}catch(e){$('copy').textContent='Kopyalanamadı';}setTimeout(()=>$('copy').textContent='Raporu kopyala',1500);};
+
+const quickScan=$('go').onclick;
+let sampleP=null;try{sampleP=window.claude&&window.claude.use?window.claude.use('sample'):null;}catch(e){}
+const escH=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let aiCtrl=null;
+$('go').onclick=async()=>{
+ quickScan();
+ const cv=$('cv').value.trim(),job=$('job').value.trim();if(cv.length<80)return;
+ const sample=sampleP?await sampleP.catch(()=>null):null;
+ if(!sample){$('ai').style.display='none';return;}
+ $('ai').style.display='block';$('aiStatus').innerHTML='<span class="spin"></span> Claude CV\'yi ilanla karşılaştırıyor…';$('aiBody').innerHTML='';
+ $('ai').scrollIntoView({behavior:'smooth'});
+ if(aiCtrl)aiCtrl.abort();aiCtrl=new AbortController();
+ const sector=$('sector').selectedOptions[0].textContent;
+ const prompt=`Sen Jobscan benzeri bir ATS ve işe alım uzmanısın. Aşağıdaki CV'yi ${job?'iş ilanıyla':'"'+sector+'" sektöründeki tipik bir pozisyonla'} karşılaştırıp Türkçe değerlendir.
+Kurallar:
+- Yalnızca CV'de yazanı değerlendir; CV'de olmayan bir deneyimi, rakamı veya başarıyı uydurma.
+- STAR yeniden yazımlarında sonucu mutlaka yüzdeyle ifade et (ör. "%25 artırdı"). CV'de gerçek rakam yoksa yüzde yerine "%X" yaz, rakam uydurma.
+- [ ] içindeki ifadeler doldurulmamış yer tutuculardır; bunları eksik olarak değerlendir.
+- Beceri sayılarında kelimenin ekli hallerini de say (bankacılık/bankacılığı).
+Yalnızca şu yapıda geçerli JSON döndür, başka metin yazma:
+{"match_rate":0-100 tam sayı,
+"summary":"2-3 cümlelik genel değerlendirme",
+"errors":[{"severity":"kritik|orta|düşük","title":"kısa hata adı","detail":"CV'de nerede/ne olduğu, mümkünse kısa alıntı","fix":"nasıl düzeltilir"}] (şunları ara: yazım ve dilbilgisi hataları, büyük-küçük harf tutarsızlıkları, çakışan veya tutarsız tarihler, doldurulmamış yer tutucular, eksik iletişim bilgisi, tekrar eden ifadeler, ATS'yi bozan biçim sorunları (dosya bilgilerine bak), gereksiz kişisel bilgi; en önemliden başla, gerçekten var olmayan hata yazma),
+"recommendations":[{"title":"kısa başlık","detail":"somut, uygulanabilir tavsiye"}] (önem sırasıyla 5-8 tavsiye; ilana uyum için eklenmesi gereken kelimeler dahil),
+"category_scores":{"searchability":0-100,"hard_skills":0-100,"soft_skills":0-100,"recruiter":0-100,"star":0-100},
+"searchability":[{"item":"kontrol adı","ok":true/false,"note":"kısa açıklama"}] (şunları kontrol et: İletişim bilgileri, Özet bölümü, Unvan uyumu, Bölüm başlıkları, Tarih biçimi, Eğitim şartı, Okunabilir biçim),
+"hard_skills":[{"skill":"","cv":sayı,"job":sayı}] (ilandaki/pozisyondaki en önemli 10-15 teknik beceri ve bilgi alanı, önem sırasıyla),
+"soft_skills":[{"skill":"","cv":sayı,"job":sayı}] (5-8 kişisel beceri),
+"recruiter_tips":[{"item":"","ok":true/false,"note":""}] (Ölçülebilir sonuçlar, Deneyim yılı uyumu, Yer tutucu/eksik bilgi, Uzunluk, Kelime kullanımı ve tekrar, Eylem fiilleri),
+"star":{"percent":0-100 (tam STAR yapısındaki deneyim maddelerinin oranı),"situation_task":0-100,"action":0-100,"result":0-100,
+"rewrites":[{"original":"CV'deki madde","rewrite":"yüzdeli STAR hali","s":true/false,"t":true/false,"a":true/false,"r":true/false}]} (en çok geliştirilmesi gereken 6 madde; s/t/a/r orijinal maddede o öğenin olup olmadığıdır)}
+
+${job?'İŞ İLANI:\n'+job+'\n\n':''}DOSYA BİLGİLERİ: ${fileMeta}\n\nCV (dosyadan çıkarılan metin):
+${cv}`;
+ try{
+  const r=await sample.json(prompt,{signal:aiCtrl.signal,modelTier:'complex'});
+  renderAI(r);$('aiStatus').textContent='';
+ }catch(e){
+  if(e&&e.name==='AbortError')return;
+  const m=e&&e.code==='not_granted'?'Claude erişimine izin verilmedi; hızlı tarama sonuçları aşağıda.':e&&e.code==='rate_limited'?'Claude şu an yoğun; biraz sonra tekrar deneyin. Hızlı tarama sonuçları aşağıda.':'Claude değerlendirmesi alınamadı ('+escH(e&&e.message||e)+'). Hızlı tarama sonuçları aşağıda.';
+  $('aiStatus').textContent='';$('aiBody').innerHTML='<div class="err">'+m+'</div>';
+ }
+};
+function ring(v,size=150){const r=size/2-12,C=2*Math.PI*r,c=color(v);return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="12"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C*v/100} ${C}" transform="rotate(-90 ${size/2} ${size/2})"/><text x="50%" y="50%" dy="8" text-anchor="middle" font-size="34" font-weight="700" fill="var(--ink)">%${v}</text></svg>`;}
+function renderAI(d){
+ const n=v=>Math.max(0,Math.min(100,Math.round(+v||0)));
+ const cs=d.category_scores||{},star=d.star||{};
+ const cnt=a=>(a||[]).filter(x=>!x.ok).length;
+ const miss=a=>(a||[]).filter(x=>(+x.job||0)>0&&(+x.cv||0)===0).length;
+ const cats=[['Aranabilirlik',cs.searchability,cnt(d.searchability)],['Teknik beceriler',cs.hard_skills,miss(d.hard_skills)],['Kişisel beceriler',cs.soft_skills,miss(d.soft_skills)],['İşe alımcı ipuçları',cs.recruiter,cnt(d.recruiter_tips)],['STAR uyumu',star.percent??cs.star,0]];
+ const check=(a)=>(a||[]).map(x=>`<div class="chk"><span class="ic ${x.ok?'ok':'no'}">${x.ok?'✓':'✗'}</span><span>${escH(x.item)}</span><span class="n small">${escH(x.note)}</span></div>`).join('');
+ const table=(a)=>`<table class="sk"><tr><th>Beceri</th><th style="text-align:center">CV</th><th style="text-align:center">İlan</th></tr>${(a||[]).map(x=>`<tr class="${(+x.cv||0)===0?'miss':''}"><td>${escH(x.skill)}</td><td class="n">${+x.cv||0}</td><td class="n">${+x.job||0}</td></tr>`).join('')}</table>`;
+ const bd=(on,t)=>`<span class="chip ${on?'ok':'no'}" style="padding:1px 7px;font-size:11.5px;margin-right:3px">${t}</span>`;
+ const rws=(star.rewrites||[]).map((x,i)=>`<div class="rw"><div class="b">${bd(x.s,'Durum')}${bd(x.t,'Görev')}${bd(x.a,'Eylem')}${bd(x.r,'Sonuç')}</div><div class="o">Önce: ${escH(x.original)}</div><div class="r">Sonra: ${escH(x.rewrite)}</div><button class="ghost" style="margin-top:6px;padding:4px 10px;font-size:12px" data-i="${i}">Kopyala</button></div>`).join('');
+ $('aiBody').innerHTML=`<div class="aiTop"><div style="text-align:center">${ring(n(d.match_rate))}<div class="small">Eşleşme oranı</div></div>
+ <div><p style="margin:0 0 12px;font-size:14px">${escH(d.summary)}</p>${cats.map(([t,v,iss])=>`<div class="mini"><span>${t} ${iss?`<span class="issues">· ${iss} eksik</span>`:''}</span><span class="small">%${n(v)}</span><div class="bar" style="grid-column:1/3"><i style="width:${n(v)}%;background:${color(n(v))}"></i></div></div>`).join('')}</div></div>
+ <div class="blk"><h3>Hatalar <span class="small">${(d.errors||[]).length} bulundu</span></h3>${(d.errors||[]).map(e=>{const sv=(e.severity||'').toLowerCase();const c=sv.startsWith('k')?'e1':sv.startsWith('o')?'e2':'e3';return `<div class="err-row"><span><span class="sev ${c}">${escH(e.severity||'')}</span></span><div><div class="t">${escH(e.title)}</div><div class="small">${escH(e.detail)}</div><div class="fx">→ ${escH(e.fix)}</div></div></div>`}).join('')||'<span class="small">Belirgin hata bulunamadı.</span>'}</div>
+ <div class="blk"><h3>Tavsiyeler</h3><ol class="rec">${(d.recommendations||[]).map(r=>`<li><b>${escH(r.title)}</b><br><span class="small">${escH(r.detail)}</span></li>`).join('')}</ol></div>
+ <div class="blk"><h3>Aranabilirlik</h3>${check(d.searchability)}</div>
+ <div class="grid blk"><div><h3>Teknik beceriler</h3>${table(d.hard_skills)}</div><div><h3>Kişisel beceriler</h3>${table(d.soft_skills)}</div></div>
+ <div class="blk"><h3>İşe alımcı ipuçları</h3>${check(d.recruiter_tips)}</div>
+ <div class="blk"><h3>STAR analizi <span class="small">Tam STAR %${n(star.percent)} · Durum/Görev %${n(star.situation_task)} · Eylem %${n(star.action)} · Sonuç %${n(star.result)}</span></h3>${rws||'<span class="small">Öneri yok.</span>'}</div>`;
+ $('aiBody').querySelectorAll('button[data-i]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(star.rewrites[+b.dataset.i].rewrite);b.textContent='Kopyalandı';}catch(e){b.textContent='Kopyalanamadı';}});
+ lastReport=`CLAUDE EŞLEŞME ORANI: %${n(d.match_rate)}\n${d.summary||''}\n\nHATALAR:\n`+(d.errors||[]).map(e=>`• [${e.severity}] ${e.title}: ${e.detail} → ${e.fix}`).join('\n')+`\n\nTAVSİYELER:\n`+(d.recommendations||[]).map((r,i)=>`${i+1}. ${r.title}: ${r.detail}`).join('\n')+`\n\n`+cats.map(c=>`- ${c[0]}: %${n(c[1])}`).join('\n')+`\n\nEksik teknik beceriler: ${(d.hard_skills||[]).filter(x=>!(+x.cv)).map(x=>x.skill).join(', ')||'-'}\n\nSTAR önerileri:\n`+(star.rewrites||[]).map(x=>'• '+x.rewrite).join('\n')+'\n\n---\n'+lastReport;
+}
+</script>
+</body>
+</html>
